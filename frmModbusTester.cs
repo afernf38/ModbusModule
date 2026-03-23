@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Newtonsoft.Json.Linq;
 using UNE135411;
@@ -42,6 +43,16 @@ namespace ModbusTester
         /// Indica si el formulario esta en proceso de cierre.
         /// </summary>
         private bool _cerrando;
+
+        /// <summary>
+        /// Token de cancelacion para carga completa de registros.
+        /// </summary>
+        private CancellationTokenSource? _scanLecturaCts;
+
+        /// <summary>
+        /// Indica si hay una carga completa de registros en ejecucion.
+        /// </summary>
+        private bool _scanLecturaEnCurso;
 
         #endregion
 
@@ -202,6 +213,59 @@ namespace ModbusTester
         }
 
         /// <summary>
+        /// Inicia la carga completa de registros conocidos en segundo plano.
+        /// </summary>
+        /// <param name="sender">Control origen del evento.</param>
+        /// <param name="e">Argumentos del evento.</param>
+        private async void btnLecturaScanTodo_Click(object? sender, EventArgs e)
+        {
+            if (_scanLecturaEnCurso)
+            {
+                return;
+            }
+
+            _scanLecturaEnCurso = true;
+            _scanLecturaCts?.Dispose();
+            _scanLecturaCts = new CancellationTokenSource();
+
+            byte unitId = (byte)numLecturaUnitId.Value;
+
+            PrepararUiInicioScan();
+            AppendLog(rtbLecturaLog, "Carga de registros conocidos iniciada.", Color.Yellow);
+
+            try
+            {
+                (int ok, int error) resultado = await Task.Run(() => CargarTodosLosRegistrosConocidos(unitId, _scanLecturaCts.Token));
+                AppendLog(rtbLecturaLog, $"Carga completada. OK={resultado.ok}, Error={resultado.error}", Color.LightGreen);
+            }
+            catch (OperationCanceledException)
+            {
+                AppendLog(rtbLecturaLog, "Carga cancelada por el usuario.", Color.LightBlue);
+            }
+            catch (Exception ex)
+            {
+                AppendLog(rtbLecturaLog, $"Error durante carga: {ex.Message}", Color.OrangeRed);
+            }
+            finally
+            {
+                FinalizarUiScan();
+                _scanLecturaCts?.Dispose();
+                _scanLecturaCts = null;
+                _scanLecturaEnCurso = false;
+            }
+        }
+
+        /// <summary>
+        /// Solicita la cancelacion de la carga completa de registros.
+        /// </summary>
+        /// <param name="sender">Control origen del evento.</param>
+        /// <param name="e">Argumentos del evento.</param>
+        private void btnLecturaCancelarScan_Click(object? sender, EventArgs e)
+        {
+            _scanLecturaCts?.Cancel();
+        }
+
+        /// <summary>
         /// Ejecuta una escritura bajo demanda.
         /// </summary>
         /// <param name="sender">Control origen del evento.</param>
@@ -296,6 +360,7 @@ namespace ModbusTester
         private void frmModbusTester_FormClosing(object? sender, FormClosingEventArgs e)
         {
             _cerrando = true;
+            _scanLecturaCts?.Cancel();
 
             lock (_lockPollingManual)
             {
@@ -304,6 +369,259 @@ namespace ModbusTester
 
             _conexion.Desconectar(out _);
         }
+
+        #endregion
+
+        #region Carga completa de lectura
+
+        /// <summary>
+        /// Definicion de un lote fijo para lectura de registros conocidos.
+        /// </summary>
+        /// <param name="Tipo">Tipo de registro Modbus.</param>
+        /// <param name="DireccionInicio">Direccion inicial del lote.</param>
+        /// <param name="Cantidad">Cantidad de registros a leer.</param>
+        /// <param name="DescripcionPorOffset">Descripcion por offset relativo dentro del lote.</param>
+        private sealed record LoteLecturaConocida(
+            clsConexionModbusTCP.TipoRegistro Tipo,
+            ushort DireccionInicio,
+            ushort Cantidad,
+            IReadOnlyDictionary<int, string> DescripcionPorOffset);
+
+        /// <summary>
+        /// Ejecuta la lectura de todos los lotes de registros conocidos del PLC.
+        /// </summary>
+        /// <param name="unitId">Unit ID de lectura.</param>
+        /// <param name="token">Token de cancelacion.</param>
+        /// <returns>Totales de filas OK y Error.</returns>
+        private (int ok, int error) CargarTodosLosRegistrosConocidos(byte unitId, CancellationToken token)
+        {
+            List<LoteLecturaConocida> lotes = ConstruirMapaRegistrosConocidos();
+
+            int totalOk = 0;
+            int totalError = 0;
+            int progreso = 0;
+
+            foreach (LoteLecturaConocida lote in lotes)
+            {
+                token.ThrowIfCancellationRequested();
+
+                clsConexionModbusTCP.ModbusComodin comodin = new clsConexionModbusTCP.ModbusComodin
+                {
+                    TipoRegistro = lote.Tipo,
+                    Direccion = lote.DireccionInicio,
+                    Cantidad = lote.Cantidad,
+                    UnitId = unitId
+                };
+
+                int cantidad = lote.Cantidad;
+                List<FilaScanRegistro> filas = new List<FilaScanRegistro>(cantidad);
+
+                bool ok = _conexion.Leer(comodin, out object respuesta, out _);
+                if (ok)
+                {
+                    string[] valores = ConvertirRespuestaABloque(respuesta, cantidad);
+                    for (int i = 0; i < cantidad; i++)
+                    {
+                        int direccionActual = lote.DireccionInicio + i;
+                        string descripcion = lote.DescripcionPorOffset.TryGetValue(i, out string? nombre) ? nombre : "(sin descripcion)";
+                        filas.Add(new FilaScanRegistro(lote.Tipo.ToString(), direccionActual, descripcion, valores[i], "OK"));
+                    }
+
+                    totalOk += cantidad;
+                }
+                else
+                {
+                    for (int i = 0; i < cantidad; i++)
+                    {
+                        int direccionActual = lote.DireccionInicio + i;
+                        string descripcion = lote.DescripcionPorOffset.TryGetValue(i, out string? nombre) ? nombre : "(sin descripcion)";
+                        filas.Add(new FilaScanRegistro(lote.Tipo.ToString(), direccionActual, descripcion, string.Empty, "Error"));
+                    }
+
+                    totalError += cantidad;
+                }
+
+                AgregarFilasScan(filas);
+                progreso += cantidad;
+                ActualizarProgresoScan(progreso);
+            }
+
+            return (totalOk, totalError);
+        }
+
+        /// <summary>
+        /// Construye el mapa fijo de lotes y descripciones conocidas del PLC WAGO.
+        /// </summary>
+        /// <returns>Lista de lotes a leer.</returns>
+        private static List<LoteLecturaConocida> ConstruirMapaRegistrosConocidos()
+        {
+            Dictionary<int, string> ai = new Dictionary<int, string>
+            {
+                [0] = "Luminancimetro 1",
+                [1] = "Detector CO2 1",
+                [2] = "Anemometro 1",
+                [3] = "Detector NO 1",
+                [4] = "Opacimetro 1",
+                [5] = "Opacimetro 2",
+                [6] = "Luminancimetro 2",
+                [7] = "Detector CO2 2",
+                [8] = "Anemometro 2",
+                [9] = "Detector NO 2",
+                [10] = "(reserved)",
+                [11] = "(reserved)"
+            };
+
+            Dictionary<int, string> di = new Dictionary<int, string>
+            {
+                [0] = "Galibo alerta 1",
+                [1] = "Extintor puerta abierta",
+                [2] = "BIE puerta abierta",
+                [3] = "Galibo alerta 2",
+                [4] = "Zona de incendio 1a",
+                [5] = "Zona de incendio 1b",
+                [6] = "Zona de incendio 2a",
+                [7] = "Zona de incendio 2b"
+            };
+
+            Dictionary<int, string> doFisicos = Enumerable.Range(0, 176)
+                .ToDictionary(i => i, i => i == 0 ? "All traffic lights and actuators (RAV/SEM, CIS/CIC/CIN, JET, exutories, grilles, signs, barriers, dampers, STOP, axial fans, etc.)" : "(mapped output)");
+
+            Dictionary<int, string> sdv = Enumerable.Range(0, 16)
+                .ToDictionary(i => i, i => i == 0 ? "Barrier locks, damper close, exutory close commands" : "(virtual output)");
+
+            Dictionary<int, string> edv = Enumerable.Range(0, 112)
+                .ToDictionary(i => i, i => i == 0 ? "Barrier/ventilation/grille/damper/exutory/JET states" : "(virtual input)");
+
+            return new List<LoteLecturaConocida>
+            {
+                new LoteLecturaConocida(clsConexionModbusTCP.TipoRegistro.InputRegister, 256, 12, ai),
+                new LoteLecturaConocida(clsConexionModbusTCP.TipoRegistro.DiscreteInput, 4800, 8, di),
+                new LoteLecturaConocida(clsConexionModbusTCP.TipoRegistro.Coil, 8192, 176, doFisicos),
+                new LoteLecturaConocida(clsConexionModbusTCP.TipoRegistro.Coil, 8368, 16, sdv),
+                new LoteLecturaConocida(clsConexionModbusTCP.TipoRegistro.DiscreteInput, 4808, 112, edv)
+            };
+        }
+
+        /// <summary>
+        /// Convierte la respuesta de lectura a un arreglo de textos de longitud fija.
+        /// </summary>
+        /// <param name="respuesta">Respuesta de lectura.</param>
+        /// <param name="cantidad">Cantidad esperada de elementos.</param>
+        /// <returns>Arreglo de texto con un valor por direccion.</returns>
+        private static string[] ConvertirRespuestaABloque(object respuesta, int cantidad)
+        {
+            string[] valores = respuesta switch
+            {
+                bool[] bools => bools.Select(v => v ? "1" : "0").ToArray(),
+                ushort[] ushorts => ushorts.Select(v => v.ToString(CultureInfo.InvariantCulture)).ToArray(),
+                Array array => array.Cast<object>().Select(v => v?.ToString() ?? string.Empty).ToArray(),
+                _ => new[] { respuesta?.ToString() ?? string.Empty }
+            };
+
+            if (valores.Length == cantidad)
+            {
+                return valores;
+            }
+
+            string[] normalizado = Enumerable.Repeat(string.Empty, cantidad).ToArray();
+            int limite = Math.Min(cantidad, valores.Length);
+            for (int i = 0; i < limite; i++)
+            {
+                normalizado[i] = valores[i];
+            }
+
+            return normalizado;
+        }
+
+        /// <summary>
+        /// Prepara la interfaz antes de iniciar la carga completa.
+        /// </summary>
+        private void PrepararUiInicioScan()
+        {
+            dgvLecturaScan.Rows.Clear();
+            pbLecturaScan.Minimum = 0;
+            pbLecturaScan.Maximum = 324;
+            pbLecturaScan.Value = 0;
+
+            btnLeer.Enabled = false;
+            btnLecturaScanTodo.Enabled = false;
+            btnLecturaCancelarScan.Enabled = true;
+        }
+
+        /// <summary>
+        /// Restaura la interfaz al finalizar o cancelar la carga completa.
+        /// </summary>
+        private void FinalizarUiScan()
+        {
+            if (IsDisposed)
+            {
+                return;
+            }
+
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(FinalizarUiScan));
+                return;
+            }
+
+            btnLeer.Enabled = true;
+            btnLecturaScanTodo.Enabled = true;
+            btnLecturaCancelarScan.Enabled = false;
+        }
+
+        /// <summary>
+        /// Agrega un bloque de filas a la grilla de resultados.
+        /// </summary>
+        /// <param name="filas">Filas a insertar.</param>
+        private void AgregarFilasScan(IReadOnlyCollection<FilaScanRegistro> filas)
+        {
+            if (dgvLecturaScan.IsDisposed)
+            {
+                return;
+            }
+
+            if (dgvLecturaScan.InvokeRequired)
+            {
+                dgvLecturaScan.BeginInvoke(new Action<IReadOnlyCollection<FilaScanRegistro>>(AgregarFilasScan), filas);
+                return;
+            }
+
+            foreach (FilaScanRegistro fila in filas)
+            {
+                dgvLecturaScan.Rows.Add(fila.Tipo, fila.Direccion, fila.Descripcion, fila.Valor, fila.Estado);
+            }
+        }
+
+        /// <summary>
+        /// Actualiza la barra de progreso de la carga completa.
+        /// </summary>
+        /// <param name="valor">Valor acumulado de progreso.</param>
+        private void ActualizarProgresoScan(int valor)
+        {
+            if (pbLecturaScan.IsDisposed)
+            {
+                return;
+            }
+
+            if (pbLecturaScan.InvokeRequired)
+            {
+                pbLecturaScan.BeginInvoke(new Action<int>(ActualizarProgresoScan), valor);
+                return;
+            }
+
+            int valorNormalizado = Math.Max(pbLecturaScan.Minimum, Math.Min(pbLecturaScan.Maximum, valor));
+            pbLecturaScan.Value = valorNormalizado;
+        }
+
+        /// <summary>
+        /// Representa una fila de resultado para la carga completa.
+        /// </summary>
+        /// <param name="Tipo">Tipo de registro.</param>
+        /// <param name="Direccion">Direccion del registro.</param>
+        /// <param name="Descripcion">Descripcion de la senal.</param>
+        /// <param name="Valor">Valor leido.</param>
+        /// <param name="Estado">Estado de lectura.</param>
+        private sealed record FilaScanRegistro(string Tipo, int Direccion, string Descripcion, string Valor, string Estado);
 
         #endregion
 

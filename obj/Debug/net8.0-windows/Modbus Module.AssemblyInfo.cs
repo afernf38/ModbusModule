@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Modbus Module")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d728b22dbc02d834c51a126aaa7ca4904594c92a")]
 [assembly: System.Reflection.AssemblyProductAttribute("Modbus Module")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Modbus Module")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

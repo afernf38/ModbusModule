@@ -311,11 +311,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\afernandes.fortiz\\OneDrive - Telice\\Escritorio\\Modbus Module\\Modbus Module.csproj",
+      "projectUniqueName": "C:\\Users\\afernandes.fortiz\\OneDrive - Telice\\Escritorio\\ModbusModule\\Modbus Module.csproj",
       "projectName": "Modbus Module",
-      "projectPath": "C:\\Users\\afernandes.fortiz\\OneDrive - Telice\\Escritorio\\Modbus Module\\Modbus Module.csproj",
+      "projectPath": "C:\\Users\\afernandes.fortiz\\OneDrive - Telice\\Escritorio\\ModbusModule\\Modbus Module.csproj",
       "packagesPath": "C:\\Users\\afernandes.fortiz\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\afernandes.fortiz\\OneDrive - Telice\\Escritorio\\Modbus Module\\obj\\",
+      "outputPath": "C:\\Users\\afernandes.fortiz\\OneDrive - Telice\\Escritorio\\ModbusModule\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

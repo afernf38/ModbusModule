@@ -162,6 +162,26 @@ namespace ModbusTester
         private RichTextBox rtbLecturaLog = null!;
 
         /// <summary>
+        /// Boton para escanear todos los registros.
+        /// </summary>
+        private Button btnLecturaScanTodo = null!;
+
+        /// <summary>
+        /// Boton para cancelar el escaneo de registros.
+        /// </summary>
+        private Button btnLecturaCancelarScan = null!;
+
+        /// <summary>
+        /// Barra de progreso del escaneo de registros.
+        /// </summary>
+        private ProgressBar pbLecturaScan = null!;
+
+        /// <summary>
+        /// Grilla con resultados del escaneo de registros.
+        /// </summary>
+        private DataGridView dgvLecturaScan = null!;
+
+        /// <summary>
         /// Combo de tipo escritura.
         /// </summary>
         private ComboBox cmbEscrituraTipo = null!;
@@ -356,6 +376,10 @@ namespace ModbusTester
             numLecturaUnitId = new NumericUpDown();
             btnLeer = new Button();
             rtbLecturaLog = new RichTextBox();
+            btnLecturaScanTodo = new Button();
+            btnLecturaCancelarScan = new Button();
+            pbLecturaScan = new ProgressBar();
+            dgvLecturaScan = new DataGridView();
 
             lblEscrituraTipo = new Label();
             cmbEscrituraTipo = new ComboBox();
@@ -556,9 +580,46 @@ namespace ModbusTester
             btnLeer.FlatStyle = FlatStyle.Flat;
             btnLeer.Click += btnLeer_Click;
 
+            btnLecturaScanTodo.Text = "Load All Registers";
+            btnLecturaScanTodo.Location = new Point(160, 165);
+            btnLecturaScanTodo.Size = new Size(170, 32);
+            btnLecturaScanTodo.BackColor = Color.MidnightBlue;
+            btnLecturaScanTodo.ForeColor = Color.White;
+            btnLecturaScanTodo.FlatStyle = FlatStyle.Flat;
+            btnLecturaScanTodo.Click += btnLecturaScanTodo_Click;
+
+            btnLecturaCancelarScan.Text = "Cancelar";
+            btnLecturaCancelarScan.Location = new Point(20, 205);
+            btnLecturaCancelarScan.Size = new Size(130, 28);
+            btnLecturaCancelarScan.Enabled = false;
+            btnLecturaCancelarScan.Click += btnLecturaCancelarScan_Click;
+
+            pbLecturaScan.Location = new Point(160, 207);
+            pbLecturaScan.Size = new Size(170, 23);
+            pbLecturaScan.Minimum = 0;
+
             ConfigurarLog(rtbLecturaLog);
-            rtbLecturaLog.Location = new Point(350, 16);
-            rtbLecturaLog.Size = new Size(600, 540);
+            rtbLecturaLog.Location = new Point(350, 477);
+            rtbLecturaLog.Size = new Size(600, 79);
+
+            dgvLecturaScan.Location = new Point(350, 16);
+            dgvLecturaScan.Size = new Size(600, 450);
+            dgvLecturaScan.AllowUserToAddRows = false;
+            dgvLecturaScan.AllowUserToDeleteRows = false;
+            dgvLecturaScan.AllowUserToResizeRows = false;
+            dgvLecturaScan.MultiSelect = false;
+            dgvLecturaScan.ReadOnly = true;
+            dgvLecturaScan.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvLecturaScan.RowHeadersVisible = false;
+            dgvLecturaScan.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvLecturaScan.Columns.Add("colTipo", "Register Type");
+            dgvLecturaScan.Columns.Add("colDireccion", "Address");
+            dgvLecturaScan.Columns.Add("colDescripcion", "Description");
+            dgvLecturaScan.Columns.Add("colValor", "Value");
+            dgvLecturaScan.Columns.Add("colEstado", "Status");
+            dgvLecturaScan.Columns[1].FillWeight = 18;
+            dgvLecturaScan.Columns[2].FillWeight = 55;
+            dgvLecturaScan.Columns[4].FillWeight = 18;
 
             tabLectura.Controls.AddRange(new Control[]
             {
@@ -571,6 +632,10 @@ namespace ModbusTester
                 lblLecturaUnitId,
                 numLecturaUnitId,
                 btnLeer,
+                btnLecturaScanTodo,
+                btnLecturaCancelarScan,
+                pbLecturaScan,
+                dgvLecturaScan,
                 rtbLecturaLog
             });
         }

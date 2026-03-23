@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "8h72vDIaODw=",
+  "dgSpecHash": "fApGssgdfKk=",
   "success": true,
-  "projectFilePath": "C:\\Users\\afernandes.fortiz\\OneDrive - Telice\\Escritorio\\Modbus Module\\Modbus Module.csproj",
+  "projectFilePath": "C:\\Users\\afernandes.fortiz\\OneDrive - Telice\\Escritorio\\ModbusModule\\Modbus Module.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\afernandes.fortiz\\.nuget\\packages\\newtonsoft.json\\13.0.3\\newtonsoft.json.13.0.3.nupkg.sha512",
     "C:\\Users\\afernandes.fortiz\\.nuget\\packages\\nmodbus4\\2.1.0\\nmodbus4.2.1.0.nupkg.sha512",
@@ -19,9 +19,9 @@
       "code": "NU1701",
       "level": "Warning",
       "message": "El paquete \"NModbus4 2.1.0\" se restauró con \".NETFramework,Version=v4.6.1, .NETFramework,Version=v4.6.2, .NETFramework,Version=v4.7, .NETFramework,Version=v4.7.1, .NETFramework,Version=v4.7.2, .NETFramework,Version=v4.8, .NETFramework,Version=v4.8.1\" en lugar de la plataforma de destino del proyecto \"net8.0-windows7.0\". Puede que el paquete no sea totalmente compatible con el proyecto.",
-      "projectPath": "C:\\Users\\afernandes.fortiz\\OneDrive - Telice\\Escritorio\\Modbus Module\\Modbus Module.csproj",
+      "projectPath": "C:\\Users\\afernandes.fortiz\\OneDrive - Telice\\Escritorio\\ModbusModule\\Modbus Module.csproj",
       "warningLevel": 1,
-      "filePath": "C:\\Users\\afernandes.fortiz\\OneDrive - Telice\\Escritorio\\Modbus Module\\Modbus Module.csproj",
+      "filePath": "C:\\Users\\afernandes.fortiz\\OneDrive - Telice\\Escritorio\\ModbusModule\\Modbus Module.csproj",
       "libraryId": "NModbus4",
       "targetGraphs": [
         "net8.0-windows7.0"

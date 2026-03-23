@@ -1,9 +1,9 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "C:\\Users\\afernandes.fortiz\\OneDrive - Telice\\Escritorio\\Modbus Module\\",
+  "WorkspaceRootPath": "C:\\Users\\afernandes.fortiz\\OneDrive - Telice\\Escritorio\\ModbusModule\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{16060820-2E44-4C6A-B082-39F961DF5E2C}|Modbus Module.csproj|c:\\users\\afernandes.fortiz\\onedrive - telice\\escritorio\\modbus module\\clsconexionmodbustcp.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{16060820-2E44-4C6A-B082-39F961DF5E2C}|Modbus Module.csproj|c:\\users\\afernandes.fortiz\\onedrive - telice\\escritorio\\modbusmodule\\clsconexionmodbustcp.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{16060820-2E44-4C6A-B082-39F961DF5E2C}|Modbus Module.csproj|solutionrelative:clsconexionmodbustcp.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
@@ -27,11 +27,11 @@
               "$type": "Document",
               "DocumentIndex": 0,
               "Title": "clsConexionModbusTCP.cs",
-              "DocumentMoniker": "C:\\Users\\afernandes.fortiz\\OneDrive - Telice\\Escritorio\\Modbus Module\\clsConexionModbusTCP.cs",
+              "DocumentMoniker": "C:\\Users\\afernandes.fortiz\\OneDrive - Telice\\Escritorio\\ModbusModule\\clsConexionModbusTCP.cs",
               "RelativeDocumentMoniker": "clsConexionModbusTCP.cs",
-              "ToolTip": "C:\\Users\\afernandes.fortiz\\OneDrive - Telice\\Escritorio\\Modbus Module\\clsConexionModbusTCP.cs",
+              "ToolTip": "C:\\Users\\afernandes.fortiz\\OneDrive - Telice\\Escritorio\\ModbusModule\\clsConexionModbusTCP.cs",
               "RelativeToolTip": "clsConexionModbusTCP.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAAIAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAqwAYAAAAQAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-03-19T07:52:32.089Z",
               "EditorCaption": ""

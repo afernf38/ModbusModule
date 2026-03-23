@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
@@ -423,13 +424,38 @@ namespace ModbusTester
                                 return false;
                             }
 
-                            if (coils.Length == 1)
+                            try
                             {
-                                contexto.Master.WriteSingleCoil(unitId, comodin.Direccion, coils[0]);
+                                if (coils.Length == 1)
+                                {
+                                    contexto.Master.WriteSingleCoil(unitId, comodin.Direccion, coils[0]);
+                                }
+                                else
+                                {
+                                    contexto.Master.WriteMultipleCoils(unitId, comodin.Direccion, coils);
+                                }
                             }
-                            else
+                            catch (SocketException) when (TryReconectarDispositivo(contexto))
                             {
-                                contexto.Master.WriteMultipleCoils(unitId, comodin.Direccion, coils);
+                                if (coils.Length == 1)
+                                {
+                                    contexto.Master.WriteSingleCoil(unitId, comodin.Direccion, coils[0]);
+                                }
+                                else
+                                {
+                                    contexto.Master.WriteMultipleCoils(unitId, comodin.Direccion, coils);
+                                }
+                            }
+                            catch (IOException) when (TryReconectarDispositivo(contexto))
+                            {
+                                if (coils.Length == 1)
+                                {
+                                    contexto.Master.WriteSingleCoil(unitId, comodin.Direccion, coils[0]);
+                                }
+                                else
+                                {
+                                    contexto.Master.WriteMultipleCoils(unitId, comodin.Direccion, coils);
+                                }
                             }
 
                             return true;
@@ -441,13 +467,38 @@ namespace ModbusTester
                                 return false;
                             }
 
-                            if (registros.Length == 1)
+                            try
                             {
-                                contexto.Master.WriteSingleRegister(unitId, comodin.Direccion, registros[0]);
+                                if (registros.Length == 1)
+                                {
+                                    contexto.Master.WriteSingleRegister(unitId, comodin.Direccion, registros[0]);
+                                }
+                                else
+                                {
+                                    contexto.Master.WriteMultipleRegisters(unitId, comodin.Direccion, registros);
+                                }
                             }
-                            else
+                            catch (SocketException) when (TryReconectarDispositivo(contexto))
                             {
-                                contexto.Master.WriteMultipleRegisters(unitId, comodin.Direccion, registros);
+                                if (registros.Length == 1)
+                                {
+                                    contexto.Master.WriteSingleRegister(unitId, comodin.Direccion, registros[0]);
+                                }
+                                else
+                                {
+                                    contexto.Master.WriteMultipleRegisters(unitId, comodin.Direccion, registros);
+                                }
+                            }
+                            catch (IOException) when (TryReconectarDispositivo(contexto))
+                            {
+                                if (registros.Length == 1)
+                                {
+                                    contexto.Master.WriteSingleRegister(unitId, comodin.Direccion, registros[0]);
+                                }
+                                else
+                                {
+                                    contexto.Master.WriteMultipleRegisters(unitId, comodin.Direccion, registros);
+                                }
                             }
 
                             return true;
@@ -517,7 +568,21 @@ namespace ModbusTester
                     }
 
                     byte unitId = comodin.UnitId ?? contexto.UnitIdDefecto;
-                    object resultado = LeerInterno(contexto, unitId, comodin.TipoRegistro, comodin.Direccion, comodin.Cantidad);
+                    object resultado;
+
+                    try
+                    {
+                        resultado = LeerInterno(contexto, unitId, comodin.TipoRegistro, comodin.Direccion, comodin.Cantidad);
+                    }
+                    catch (SocketException) when (TryReconectarDispositivo(contexto))
+                    {
+                        resultado = LeerInterno(contexto, unitId, comodin.TipoRegistro, comodin.Direccion, comodin.Cantidad);
+                    }
+                    catch (IOException) when (TryReconectarDispositivo(contexto))
+                    {
+                        resultado = LeerInterno(contexto, unitId, comodin.TipoRegistro, comodin.Direccion, comodin.Cantidad);
+                    }
+
                     respuesta = resultado;
                     return true;
                 }
@@ -601,7 +666,21 @@ namespace ModbusTester
                         }
 
                         byte unitId = elemento.UnitId ?? contexto.UnitIdDefecto;
-                        object resultado = LeerInterno(contexto, unitId, elemento.TipoRegistro, elemento.Direccion, elemento.Cantidad);
+                        object resultado;
+
+                        try
+                        {
+                            resultado = LeerInterno(contexto, unitId, elemento.TipoRegistro, elemento.Direccion, elemento.Cantidad);
+                        }
+                        catch (SocketException) when (TryReconectarDispositivo(contexto))
+                        {
+                            resultado = LeerInterno(contexto, unitId, elemento.TipoRegistro, elemento.Direccion, elemento.Cantidad);
+                        }
+                        catch (IOException) when (TryReconectarDispositivo(contexto))
+                        {
+                            resultado = LeerInterno(contexto, unitId, elemento.TipoRegistro, elemento.Direccion, elemento.Cantidad);
+                        }
+
                         JObject mensaje = CrearMensajeLectura(elemento.CodElemento, elemento.TipoRegistro, elemento.Direccion, elemento.Cantidad, unitId, resultado);
                         OnMensajeEntrante(mensaje, elemento.CodElemento);
                     }
@@ -656,6 +735,46 @@ namespace ModbusTester
                 TipoRegistro.InputRegister => contexto.Master.ReadInputRegisters(unitId, direccion, cantidad),
                 _ => throw new InvalidOperationException("Tipo de registro no soportado.")
             };
+        }
+
+        /// <summary>
+        /// Intenta reconectar un dispositivo cuando el socket subyacente se invalida.
+        /// </summary>
+        /// <param name="contexto">Contexto del dispositivo a reconectar.</param>
+        /// <returns>Verdadero si se reconstruye correctamente la conexion del dispositivo.</returns>
+        private bool TryReconectarDispositivo(ContextoDispositivo contexto)
+        {
+            try
+            {
+                try
+                {
+                    contexto.TcpClient.Close();
+                    contexto.TcpClient.Dispose();
+                }
+                catch
+                {
+                    // Se ignoran errores de liberacion del socket previo.
+                }
+
+                TcpClient tcpClient = new TcpClient
+                {
+                    ReceiveTimeout = contexto.TimeoutMs,
+                    SendTimeout = contexto.TimeoutMs
+                };
+
+                tcpClient.Connect(contexto.Ip, contexto.Puerto);
+                ModbusIpMaster master = ModbusIpMaster.CreateIp(tcpClient);
+
+                contexto.TcpClient = tcpClient;
+                contexto.Master = master;
+                _dispositivos[contexto.Clave] = contexto;
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         /// <summary>
